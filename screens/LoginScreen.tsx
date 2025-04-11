@@ -17,13 +17,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { ScrollView } from 'react-native-gesture-handler';
 import { useAuth } from '../context/AuthContext';
 import env from '../config/env';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const LoginScreen = () => {
-  const { login } = useAuth(); // función que debe guardar token/usuario en contexto
+  const { signIn } = useAuth(); // función que debe guardar token/usuario en contexto
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  AsyncStorage.removeItem('token');
+  
 
   const handleLogin = async () => {
     try {
@@ -32,7 +36,7 @@ const LoginScreen = () => {
         'email' : email, 
         'password' : password 
       };
-      const response = await fetch(`${env.API_URL}auth/login`, {
+      const response : any = await fetch(`${env.API_URL}auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -40,24 +44,20 @@ const LoginScreen = () => {
         body: JSON.stringify(jsonObject),
       })
       .then(function (a) {
-        console.log("a")
-        return a.json(); // call the json method on the response to get JSON
+        return a.json(); 
       })
-      .then(function (json) {
-        console.log("json")
-          console.log(json)
+      .then(function (json : any) {
+        if (!json.token) {
+          throw new Error('Error al iniciar sesión');
+        }
+        else{
+          AsyncStorage.setItem('token', json.token);
+          signIn(json.token, email);
+
+        }
       })
 
 
-      /*if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Error al iniciar sesión');
-      }
-
-      const data: any = await response.json();
-      console.log(data)
-      login(); // aquí puedes guardar token, user, etc]
-*/
     } catch (error: any) {
       Alert.alert('Login fallido', error.message);
     } finally {

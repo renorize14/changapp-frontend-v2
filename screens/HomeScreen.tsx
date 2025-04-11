@@ -1,14 +1,213 @@
-import React from 'react';
-import { View, Text, Button } from 'react-native';
+import React, { useState } from 'react';
+import { Modal, View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import Icon from 'react-native-vector-icons/FontAwesome';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useNavigation } from '@react-navigation/native';
+
+const posts = [
+  {
+    id: '1',
+    user: 'Usao Man',
+    time: 'Hace 3 h',
+    content: 'Lorem ipsum oldorsit amet, consectetur adipiscing elit, duomaqur ada ludameda',
+  },
+  {
+    id: '2',
+    user: 'Usao Man',
+    time: 'Hace 3 h',
+    content: 'Lorem ipsum oldorsit amet, consectetur adipiscing elit, duomaqur ada ludameda',
+  },
+];
 
 export default function HomeScreen() {
-  const { logout } = useAuth();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  AsyncStorage.removeItem('token');
+  const { signOut } = useAuth(); 
+  const navigation = useNavigation();
+
+  const handleLogout = () => {
+    signOut();
+    console.log('Sesión cerrada');
+    setShowLogoutModal(false);
+  };
+
+  const renderPost = ({ item }: any) => (
+    <View style={styles.post}>
+      <View style={styles.postHeader}>
+        <View style={styles.avatar} />
+        <View>
+          <Text style={styles.user}>{item.user}</Text>
+          <Text style={styles.time}>{item.time}</Text>
+        </View>
+      </View>
+      <Text style={styles.content}>{item.content}</Text>
+      <View style={styles.postFooter}>
+        <Icon name="thumbs-up" size={20} color="#555" style={styles.iconFooter} />
+        <Icon name="comment" size={20} color="#555" />
+      </View>
+    </View>
+  );
+
+  
 
   return (
-    <View>
-      <Text>Bienvenido a la App</Text>
-      <Button title="Cerrar sesión" onPress={logout} />
+
+    
+    <View style={styles.container}>
+      {/* Barra superior */}
+      <View style={styles.topBar}>
+      <TouchableOpacity onPress={() => setShowLogoutModal(true)}>
+        <Icon name="power-off" size={20} color="white" />
+      </TouchableOpacity>
+      
+        
+        <Icon name="map-marker" size={20} color="white" />
+        <Icon name="search" size={20} color="white" />
+        <Icon name="bars" size={20} color="white" />
+        <TouchableOpacity onPress={() => navigation.navigate("ProfileSettings")}>
+        <Icon name="user" size={20} color="white" />
+        </TouchableOpacity>
+        
+      </View>
+
+      {/* Crear noticia */}
+      <TouchableOpacity style={styles.newPostBox}>
+        <Icon name="pencil" size={16} color="#fff" />
+        <Text style={styles.newPostText}>Crear una noticia...</Text>
+      </TouchableOpacity>
+
+      {/* Lista de publicaciones */}
+      <FlatList
+        data={posts}
+        keyExtractor={(item) => item.id}
+        renderItem={renderPost}
+        contentContainerStyle={styles.postsContainer}
+      />
+
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={showLogoutModal}
+        onRequestClose={() => setShowLogoutModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>¿Cerrar sesión?</Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: '#ddd' }]}
+                onPress={() => setShowLogoutModal(false)}
+              >
+                <Text>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: '#d9534f' }]}
+                onPress={handleLogout}
+              >
+                <Text style={{ color: '#fff' }}>Cerrar sesión</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#1E5D96',
+    paddingHorizontal: 10,
+    paddingTop: 50,
+  },
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 20,
+  },
+  newPostBox: {
+    backgroundColor: '#4682B4',
+    borderRadius: 12,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  newPostText: {
+    color: '#fff',
+    marginLeft: 10,
+    fontSize: 16,
+  },
+  postsContainer: {
+    paddingBottom: 20,
+  },
+  post: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 15,
+  },
+  postHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#ccc',
+    marginRight: 10,
+  },
+  user: {
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  time: {
+    color: '#555',
+    fontSize: 12,
+  },
+  content: {
+    fontSize: 14,
+    marginVertical: 10,
+    color: '#333',
+  },
+  postFooter: {
+    flexDirection: 'row',
+    marginTop: 10,
+  },
+  iconFooter: {
+    marginRight: 15,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 20,
+    width: '80%',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 20,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  modalButton: {
+    flex: 1,
+    marginHorizontal: 5,
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+  },
+});

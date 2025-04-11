@@ -4,11 +4,13 @@ import { useAuth } from '../context/AuthContext';
 import LoginScreen from './../screens/LoginScreen';
 import RegisterScreen from './../screens/RegisterScreen';
 import HomeScreen from './../screens/HomeScreen';
+import ProfileSettingsScreen from '../screens/ProfileSettingsScreen';
 
 export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
   Home: undefined;
+  ProfileSettings : undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -24,7 +26,11 @@ export default function Routes() {
           <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false }} />
         </>
       ) : (
-        <Stack.Screen name="Home" component={HomeScreen} />
+        <>
+          <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }}/>
+          <Stack.Screen name="ProfileSettings" component={ProfileSettingsScreen} options={{ headerShown: false }}/>
+        </>
+        
       )}
     </Stack.Navigator>
   );
