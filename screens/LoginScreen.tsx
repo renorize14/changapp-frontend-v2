@@ -59,7 +59,7 @@ const LoginScreen = () => {
 
 
     } catch (error: any) {
-      Alert.alert('Login fallido', error.message);
+      Alert.alert('Login fallido', "Credenciales inválidas");
     } finally {
       setLoading(false);
     }

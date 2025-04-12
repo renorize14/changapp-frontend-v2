@@ -5,12 +5,14 @@ import LoginScreen from './../screens/LoginScreen';
 import RegisterScreen from './../screens/RegisterScreen';
 import HomeScreen from './../screens/HomeScreen';
 import ProfileSettingsScreen from '../screens/ProfileSettingsScreen';
+import MapScreen from '../screens/MapScreen';
 
 export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
   Home: undefined;
   ProfileSettings : undefined;
+  MapSearch: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -29,6 +31,7 @@ export default function Routes() {
         <>
           <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }}/>
           <Stack.Screen name="ProfileSettings" component={ProfileSettingsScreen} options={{ headerShown: false }}/>
+          <Stack.Screen name="MapSearch" component={MapScreen} options={{ headerShown: false }}/>
         </>
         
       )}

@@ -27,9 +27,101 @@ import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../context/AuthContext';
 import env from '../config/env';
 
+
+
+
 const ProfileSettingsScreen = () => {
-  const navigation = useNavigation();
   const { token, email } = useAuth();
+  const [selectedSport, setSelectedSport] = useState<number>(0);
+  const [selectedSportName, setSelectedSportName] = useState<String>("");
+  const [userId, setUserId] = useState<number>(0);
+  const [sportInfo, setSportInfo] = useState({
+    primary_position: '',
+    secondary_position: '',
+    description: '',
+  });
+
+  const [isSportModalVisible, setIsSportModalVisible] = useState(false);
+
+
+  const handleEditSport = async (field: string) => {
+    let sportId : number = 0;
+    if ( field == 'basketball'){
+      sportId = 3;
+      setSelectedSportName("Basquetbol");
+    }
+    else if ( field == 'basketball3x3'){
+      sportId = 4;
+      setSelectedSportName("Basquetbol 3x3");
+    }
+    else if ( field == 'football7'){
+      sportId = 1;
+      setSelectedSportName("Fútbol 7");
+    }
+    else if ( field == 'football5'){
+      sportId = 2;
+      setSelectedSportName("Fútbol 5");
+    }
+    if (!sportId || !email) return;
+
+    try {
+      const res = await fetch(`${env.API_URL}users/sport?email=${email}&sportId=${sportId}`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) throw new Error('Error al obtener info del deporte');
+
+      const data = await res.json();
+      setUserId(data.userId);
+      setSportInfo({
+        primary_position: data.primaryPosition || '',
+        secondary_position: data.secondaryPosition || '',
+        description: data.description || '',
+      });
+      setSelectedSport(sportId);
+      setIsSportModalVisible(true);
+    } catch (error) {
+      console.error('Error al cargar deporte:', error);
+      alert('No se pudo cargar la información del deporte');
+    }
+  };
+
+  const handleSaveSportInfo = async () => {
+    if (!selectedSport || !email) return;
+
+    try {
+
+      let jsonInput = {
+        sportId : selectedSport,
+        userEmail: email,
+        userId: userId,
+        primaryPosition: sportInfo.primary_position,
+        secondaryPosition : sportInfo.secondary_position,
+        description : sportInfo.description
+      }
+
+      const res = await fetch(`${env.API_URL}sport-users/`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(jsonInput),
+      });
+
+      if (!res.ok) throw new Error('Error al guardar info del deporte');
+
+      alert('Información actualizada correctamente');
+      setIsSportModalVisible(false);
+    } catch (error) {
+      console.error('Error al guardar deporte:', error);
+      alert('No se pudo guardar la información del deporte');
+    }
+  };
+  const navigation = useNavigation();
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -123,7 +215,6 @@ const ProfileSettingsScreen = () => {
 
   const handleSaveChanges = async () => {
     try {
-      // Crear un objeto con los campos que sí deben actualizarse
       const updateData = {
         firstName: formData.firstName,
         lastName: formData.lastName,
@@ -134,7 +225,6 @@ const ProfileSettingsScreen = () => {
         football7: formData.football7,
         football5: formData.football5,
         birthdate: formData.birthdate,
-        // No incluimos email, profilePhoto ni georeferencia
       };
 
       const response = await fetch(`${env.API_URL}users/`, {
@@ -181,7 +271,7 @@ const ProfileSettingsScreen = () => {
       />
       <Text style={styles.checkboxLabel}>{label}</Text>
       {formData[field] && (
-        <TouchableOpacity onPress={() => console.log(`Editar ${field}`)}>
+        <TouchableOpacity onPress={() => handleEditSport(field)}>
           <Icon name="pencil" size={20} color="#fff" style={styles.editIcon} />
         </TouchableOpacity>
       )}
@@ -343,8 +433,6 @@ const ProfileSettingsScreen = () => {
         <Button mode="contained" onPress={showConfirmationModal} style={styles.saveButton} labelStyle={styles.saveButtonText}>
           Guardar cambios
         </Button>
-
-        {/* Modal de confirmación */}
         <Portal>
           <Dialog visible={showConfirmModal} onDismiss={hideConfirmationModal}>
             <Dialog.Title>Confirmar cambios</Dialog.Title>
@@ -357,7 +445,43 @@ const ProfileSettingsScreen = () => {
             </Dialog.Actions>
           </Dialog>
         </Portal>
+        <Portal>
+          <Dialog visible={isSportModalVisible} onDismiss={() => setIsSportModalVisible(false)} >
+            <Dialog.Title>Preferencias para {selectedSportName}</Dialog.Title>
+            <Dialog.Content>
+              <Text>Posición favorita</Text>
+                <TextInput
+                  value={sportInfo.primary_position}
+                  onChangeText={value => setSportInfo(prev => ({ ...prev, primary_position: value }))}
+                  style={styles.input}
+                  mode="outlined"
+                />
+
+              <Text>Posición alternativa</Text>
+                <TextInput
+                  value={sportInfo.secondary_position}
+                  onChangeText={value => setSportInfo(prev => ({ ...prev, secondary_position: value }))}
+                  style={styles.input}
+                  mode="outlined"
+                />
+
+              <Text>Describete</Text>
+                <TextInput
+                  multiline
+                  mode="outlined"
+                  value={sportInfo.description}
+                  onChangeText={text => setSportInfo(prev => ({ ...prev, description: text }))}
+                />
+            </Dialog.Content>
+            <Dialog.Actions>
+              <Button onPress={() => setIsSportModalVisible(false)}>Cancelar</Button>
+              <Button onPress={handleSaveSportInfo}>Guardar</Button>
+            </Dialog.Actions>
+          </Dialog>
+        </Portal>
       </ScrollView>
+
+      
     </KeyboardAvoidingView>
   );
 };
@@ -466,6 +590,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 12,
   },
+  
 });
 
 export default ProfileSettingsScreen;

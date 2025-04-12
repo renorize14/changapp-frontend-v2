@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { Modal, View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity } from 'react-native';
+import { Modal, View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
+import * as Location from 'expo-location';
+import env from '../config/env';
 
 const posts = [
   {
@@ -23,8 +25,9 @@ const posts = [
 export default function HomeScreen() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   AsyncStorage.removeItem('token');
-  const { signOut } = useAuth(); 
+  const { signOut, email, token } = useAuth(); 
   const navigation = useNavigation();
+  const [showGeoModal, setShowGeoModal] = useState(false);
 
   const handleLogout = () => {
     signOut();
@@ -49,6 +52,48 @@ export default function HomeScreen() {
     </View>
   );
 
+  const handleGeolocationUpdate = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permiso denegado', 'No se pudo obtener tu ubicación.');
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({});
+      const latitude = location.coords.latitude;
+      const longitude = location.coords.longitude;
+      const georeference = `${latitude},${longitude}`;
+
+      const payload = {
+        email: email,
+        georeference,
+      };
+
+      console.log('Enviando:', payload);
+
+      const response = await fetch(`${env.API_URL}users/georeference`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (response.ok) {
+        Alert.alert('Éxito', 'Ubicación actualizada correctamente');
+      } else {
+        Alert.alert('Error', 'No se pudo actualizar la ubicación');
+      }
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Error', 'Ocurrió un problema al obtener la ubicación');
+    } finally {
+      setShowGeoModal(false);
+    }
+  };
+
   
 
   return (
@@ -57,16 +102,21 @@ export default function HomeScreen() {
     <View style={styles.container}>
       {/* Barra superior */}
       <View style={styles.topBar}>
-      <TouchableOpacity onPress={() => setShowLogoutModal(true)}>
-        <Icon name="power-off" size={20} color="white" />
-      </TouchableOpacity>
-      
+        <TouchableOpacity onPress={() => setShowLogoutModal(true)}>
+          <Icon name="power-off" size={20} color="white" />
+        </TouchableOpacity>      
         
-        <Icon name="map-marker" size={20} color="white" />
-        <Icon name="search" size={20} color="white" />
+        <TouchableOpacity onPress={() => setShowGeoModal(true)}>
+          <Icon name="map-marker" size={20} color="white" />
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={() => navigation.navigate("MapSearch")}>
+          <Icon name="map" size={20} color="white" />
+        </TouchableOpacity>
+
         <Icon name="bars" size={20} color="white" />
         <TouchableOpacity onPress={() => navigation.navigate("ProfileSettings")}>
-        <Icon name="user" size={20} color="white" />
+          <Icon name="user" size={20} color="white" />
         </TouchableOpacity>
         
       </View>
@@ -106,6 +156,23 @@ export default function HomeScreen() {
                 onPress={handleLogout}
               >
                 <Text style={{ color: '#fff' }}>Cerrar sesión</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal georeferencia */}
+      <Modal animationType="fade" transparent={true} visible={showGeoModal} onRequestClose={() => setShowGeoModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>¿Desea actualizar su posición en el mapa?</Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity style={[styles.modalButton, { backgroundColor: '#ddd' }]} onPress={() => setShowGeoModal(false)}>
+                <Text>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.modalButton, { backgroundColor: '#5cb85c' }]} onPress={handleGeolocationUpdate}>
+                <Text style={{ color: '#fff' }}>Actualizar</Text>
               </TouchableOpacity>
             </View>
           </View>
