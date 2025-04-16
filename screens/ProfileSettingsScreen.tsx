@@ -135,6 +135,7 @@ const ProfileSettingsScreen = () => {
     football5: false,
     birthdate: '',
     profilePhoto: '',
+    georeference : ''
   });
 
   const [loading, setLoading] = useState(true);
@@ -170,7 +171,9 @@ const ProfileSettingsScreen = () => {
           football5: data.football5 || false,
           birthdate: data.birthdate || '',
           profilePhoto: data.profilePhoto || '',
+          georeference: data.geoReference || ''
         });
+        console.log(data.geoReference)
       } catch (error) {
         console.error('Error:', error);
       } finally {
@@ -225,6 +228,7 @@ const ProfileSettingsScreen = () => {
         football7: formData.football7,
         football5: formData.football5,
         birthdate: formData.birthdate,
+        geoReference : formData.georeference,
       };
 
       const response = await fetch(`${env.API_URL}users/`, {
@@ -517,11 +521,11 @@ const styles = StyleSheet.create({
   },
   container: {
     padding: 20,
-    backgroundColor: '#2264A7',
+    backgroundColor: '#0a4ea1',
   },
   loadingContainer: {
     flex: 1,
-    backgroundColor: '#2264A7',
+    backgroundColor: '#0a4ea1',
     justifyContent: 'center',
     alignItems: 'center',
   },
