@@ -32,7 +32,7 @@ interface UserData {
 
 export default function HomeScreen() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const { signOut, email, token } = useAuth(); 
+  const { signOut, email, token } = useAuth();
   const navigation = useNavigation();
   const [showGeoModal, setShowGeoModal] = useState(false);
   const [news, setNews] = useState<any[]>([]);
@@ -49,6 +49,37 @@ export default function HomeScreen() {
 
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const [dropdownTopicVisible, setDropdownTopicVisible] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [postToDelete, setPostToDelete] = useState<string | null>(null);
+
+  const definePostToDelete = ( id : string ) =>{
+    setPostToDelete(id);
+  }
+
+  const handleDeletePost = async (id: string) => {
+    try {
+
+      const response = await fetch(`${env.API_URL}news/${id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        Alert.alert('Éxito', 'Publicación eliminada');
+      } else {
+        console.log(response)
+        Alert.alert('Error', 'No se pudo eliminar la publicación');
+      }
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Error', 'Ocurrió un problema al eliminar la publicación');
+    } finally {
+      fetchNews();
+    }
+  };
 
   const openSportsMenu = () => {
     setSportMenuVisible(true);
@@ -63,11 +94,11 @@ export default function HomeScreen() {
           Authorization: `Bearer ${token}`,
         },
       });
-  
+
       if (!response.ok) {
         throw new Error('Error al obtener los datos del usuario');
       }
-  
+
       const data = await response.json();
       setUserData(data);
     } catch (error) {
@@ -114,11 +145,9 @@ export default function HomeScreen() {
       fetchNews();
     }, [])
   );
-  
+
 
   useEffect(() => {
-    
-
     fetchNews();
   }, []);
 
@@ -130,25 +159,25 @@ export default function HomeScreen() {
 
   function getDistanceFromLatLonInKm(geo: string): number {
 
-    let lat1 : number = parseFloat(userData?.geoReference.split(",")[0] || "");
-    let lon1 : number = parseFloat(userData?.geoReference.split(",")[1] || "");
+    let lat1: number = parseFloat(userData?.geoReference.split(",")[0] || "");
+    let lon1: number = parseFloat(userData?.geoReference.split(",")[1] || "");
 
-    let lat2 : number = parseFloat(geo.split(",")[0]);
-    let lon2 : number = parseFloat(geo.split(",")[1]);
+    let lat2: number = parseFloat(geo.split(",")[0]);
+    let lon2: number = parseFloat(geo.split(",")[1]);
     const R = 6371; // Radio de la Tierra en km
     const dLat = deg2rad(lat2 - lat1);
     const dLon = deg2rad(lon2 - lon1);
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
       Math.cos(deg2rad(lat1)) *
-        Math.cos(deg2rad(lat2)) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
+      Math.cos(deg2rad(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     const d = R * c;
     return d;
   }
-  
+
   function deg2rad(deg: number): number {
     return deg * (Math.PI / 180);
   }
@@ -157,21 +186,33 @@ export default function HomeScreen() {
     <View style={styles.post}>
       <View style={styles.postHeader}>
         <View style={styles.avatar} />
-        <View>
+
+        <View style={{ flex: 1 }}>
           <Text style={styles.user}>{item.nickname}</Text>
           <Text style={styles.time}>{new Date(item.timestamp).toLocaleString()}</Text>
           <Text style={styles.time}>{item.sport} - {item.topic}</Text>
-          <Text style={styles.time}>📍a { getDistanceFromLatLonInKm(item.georeference || ",").toFixed(2)} km de distancia</Text>
-
+          <Text style={styles.time}>
+            📍a {getDistanceFromLatLonInKm(item.georeference || ",").toFixed(2)} km de distancia
+          </Text>
         </View>
+
+        {userData?.id === item.user_id && (
+          <TouchableOpacity onPress={() => {
+            definePostToDelete(item._id);
+            setShowDeleteModal(true);
+          }}>
+            <Icon name="trash" size={20} color="red" />
+          </TouchableOpacity>
+        )}
       </View>
+
       <Text style={styles.content}>{item.body}</Text>
+
       <View style={styles.postFooter}>
         <Icon name="thumbs-up" size={20} color="#555" style={styles.iconFooter} />
         <Icon name="comment" size={20} color="#555" />
       </View>
     </View>
-
   );
 
   const handleGeolocationUpdate = async () => {
@@ -215,20 +256,16 @@ export default function HomeScreen() {
     }
   };
 
-  
-
-  
-
   return (
 
-    
+
     <View style={styles.container}>
       {/* Barra superior */}
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => setShowLogoutModal(true)}>
           <Icon name="power-off" size={20} color="white" />
-        </TouchableOpacity>      
-        
+        </TouchableOpacity>
+
         <TouchableOpacity onPress={() => setShowGeoModal(true)}>
           <Icon name="map-marker" size={20} color="white" />
         </TouchableOpacity>
@@ -242,7 +279,7 @@ export default function HomeScreen() {
         <TouchableOpacity onPress={() => navigation.navigate("ProfileSettings")}>
           <Icon name="user" size={20} color="white" />
         </TouchableOpacity>
-        
+
       </View>
 
       {/* Lista de publicaciones */}
@@ -298,7 +335,38 @@ export default function HomeScreen() {
           </View>
         </View>
       </Modal>
-      
+
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={showDeleteModal}
+        onRequestClose={() => setShowDeleteModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>¿Eliminar este post?</Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: '#ddd' }]}
+                onPress={() => setShowDeleteModal(false)}
+              >
+                <Text>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: '#d9534f' }]}
+                onPress={() => {
+                  if (postToDelete) handleDeletePost(postToDelete);
+                  setShowDeleteModal(false);
+                  setPostToDelete(null);
+                }}
+              >
+                <Text style={{ color: '#fff' }}>Eliminar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Modal noticia */}
       <FAB
         icon="plus"
@@ -313,7 +381,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    padding: 2, 
+    padding: 2,
   },
   radioGroup: {
     flex: 1,
@@ -321,7 +389,7 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     borderWidth: 1,
     borderRadius: 8,
-    backgroundColor : "#1a5081"
+    backgroundColor: "#1a5081"
   },
   radioLabel: {
     fontSize: 14,
@@ -332,7 +400,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1E5D96',
     paddingHorizontal: 20,
     paddingTop: 50,
-    
+
   },
   publicationsLabel: {
     fontSize: 16,
@@ -447,7 +515,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 20,
-    color: '#ffffff'
+    color: '#000000'
   },
   modalButtons: {
     flexDirection: 'row',
