@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useWebSocketNotifications } from '../components/useWebSocketNotifications';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -8,6 +9,8 @@ interface AuthContextType {
   signIn: (token: string, email: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
+
+
 
 const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
@@ -18,10 +21,13 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+
+
   const [token, setToken] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
 
-  // Cargar token al inicio
+  useWebSocketNotifications(email ?? '');
+
   useEffect(() => {
     const loadToken = async () => {
       const savedToken = await AsyncStorage.getItem('token');

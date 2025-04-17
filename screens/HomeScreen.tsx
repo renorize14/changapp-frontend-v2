@@ -9,6 +9,7 @@ import env from '../config/env';
 import { Button, FAB, Menu, Portal, Provider, RadioButton } from 'react-native-paper';
 import { Dimensions } from 'react-native';
 import { ScrollView, TouchableWithoutFeedback } from 'react-native-gesture-handler';
+import PostItem from '../components/PostItem';
 
 const { height } = Dimensions.get('window');
 
@@ -157,63 +158,6 @@ export default function HomeScreen() {
     setShowLogoutModal(false);
   };
 
-  function getDistanceFromLatLonInKm(geo: string): number {
-
-    let lat1: number = parseFloat(userData?.geoReference.split(",")[0] || "");
-    let lon1: number = parseFloat(userData?.geoReference.split(",")[1] || "");
-
-    let lat2: number = parseFloat(geo.split(",")[0]);
-    let lon2: number = parseFloat(geo.split(",")[1]);
-    const R = 6371; // Radio de la Tierra en km
-    const dLat = deg2rad(lat2 - lat1);
-    const dLon = deg2rad(lon2 - lon1);
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(deg2rad(lat1)) *
-      Math.cos(deg2rad(lat2)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const d = R * c;
-    return d;
-  }
-
-  function deg2rad(deg: number): number {
-    return deg * (Math.PI / 180);
-  }
-
-  const renderPost = ({ item }: any) => (
-    <View style={styles.post}>
-      <View style={styles.postHeader}>
-        <View style={styles.avatar} />
-
-        <View style={{ flex: 1 }}>
-          <Text style={styles.user}>{item.nickname}</Text>
-          <Text style={styles.time}>{new Date(item.timestamp).toLocaleString()}</Text>
-          <Text style={styles.time}>{item.sport} - {item.topic}</Text>
-          <Text style={styles.time}>
-            📍a {getDistanceFromLatLonInKm(item.georeference || ",").toFixed(2)} km de distancia
-          </Text>
-        </View>
-
-        {userData?.id === item.user_id && (
-          <TouchableOpacity onPress={() => {
-            definePostToDelete(item._id);
-            setShowDeleteModal(true);
-          }}>
-            <Icon name="trash" size={20} color="red" />
-          </TouchableOpacity>
-        )}
-      </View>
-
-      <Text style={styles.content}>{item.body}</Text>
-
-      <View style={styles.postFooter}>
-        <Icon name="thumbs-up" size={20} color="#555" style={styles.iconFooter} />
-        <Icon name="comment" size={20} color="#555" />
-      </View>
-    </View>
-  );
 
   const handleGeolocationUpdate = async () => {
     try {
@@ -285,11 +229,17 @@ export default function HomeScreen() {
       {/* Lista de publicaciones */}
       <FlatList
         data={news}
-        keyExtractor={(item) => item.timestamp}
-        renderItem={renderPost}
-        contentContainerStyle={styles.postsContainer}
+        keyExtractor={(item) => item._id}
         refreshing={isLoadingNews}
         onRefresh={fetchNews}
+        renderItem={({ item }) => (
+          <PostItem
+            item={item}
+            userData={userData}
+            definePostToDelete={definePostToDelete}
+            setShowDeleteModal={setShowDeleteModal}
+          />
+        )}
       />
 
       <Modal
