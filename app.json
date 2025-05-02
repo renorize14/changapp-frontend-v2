@@ -14,10 +14,16 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.renorize2024.changappFrontV2"
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "8adcd3c7-20d6-488e-ba83-790563caa155"
+      }
     }
   }
 }

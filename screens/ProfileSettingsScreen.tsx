@@ -62,6 +62,10 @@ const ProfileSettingsScreen = () => {
       sportId = 2;
       setSelectedSportName("Fútbol 5");
     }
+    else if ( field == 'padel'){
+      sportId = 5;
+      setSelectedSportName("Padel");
+    }
     if (!sportId || !email) return;
 
     try {
@@ -133,6 +137,7 @@ const ProfileSettingsScreen = () => {
     basketball3x3: false,
     football7: false,
     football5: false,
+    padel: false,
     birthdate: '',
     profilePhoto: '',
     georeference : ''
@@ -169,11 +174,11 @@ const ProfileSettingsScreen = () => {
           basketball3x3: data.basketball3x3 || false,
           football7: data.football7 || false,
           football5: data.football5 || false,
+          padel : data.padel || false,
           birthdate: data.birthdate || '',
           profilePhoto: data.profilePhoto || '',
           georeference: data.geoReference || ''
         });
-        console.log(data.geoReference)
       } catch (error) {
         console.error('Error:', error);
       } finally {
@@ -227,8 +232,10 @@ const ProfileSettingsScreen = () => {
         basketball3x3: formData.basketball3x3,
         football7: formData.football7,
         football5: formData.football5,
+        padel: formData.padel,
         birthdate: formData.birthdate,
         geoReference : formData.georeference,
+        profilePhoto : formData.profilePhoto
       };
 
       const response = await fetch(`${env.API_URL}users/`, {
@@ -298,8 +305,23 @@ const ProfileSettingsScreen = () => {
 
     if (!result.canceled && result.assets.length > 0) {
       const uri = result.assets[0].uri;
-      handleChange('profilePhoto', uri);
+
+      // Convertir imagen a base64
+      const base64Image = await convertToBase64(uri);
+      handleChange('profilePhoto', base64Image);
     }
+  };
+
+  // Función para convertir la imagen a base64
+  const convertToBase64 = async (uri: string) => {
+    const response = await fetch(uri);
+    const blob = await response.blob();
+    const reader = new FileReader();
+    return new Promise<string>((resolve, reject) => {
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
   };
 
   if (loading) {
@@ -433,6 +455,7 @@ const ProfileSettingsScreen = () => {
         {renderCheckbox('Básquetbol 3x3', 'basketball3x3')}
         {renderCheckbox('Fútbol 7', 'football7')}
         {renderCheckbox('Fútbol 5', 'football5')}
+        {renderCheckbox('Padel', 'padel')}
 
         <Button mode="contained" onPress={showConfirmationModal} style={styles.saveButton} labelStyle={styles.saveButtonText}>
           Guardar cambios

@@ -33,8 +33,8 @@ interface UserData {
 }
 
 export default function PublishScreen() {
-  const [deporte, setDeporte] = useState('');
-  const [topico, setTopico] = useState('');
+  const [deporte, setDeporte] = useState('Futbol 7');
+  const [topico, setTopico] = useState('Jugar');
   const [texto, setTexto] = useState('');
   const textInputRef = useRef<TextInput>(null);
   const navigation = useNavigation();
@@ -81,10 +81,8 @@ export default function PublishScreen() {
       timestamp: new Date().toISOString(),
       activo: true,
       georeference: userData?.geoReference,
+      profilePicture : userData?.profilePhoto
     };
-
-
-    console.log(payload)
 
     try {
       const response = await fetch(`${env.API_URL}news`, {
@@ -136,7 +134,17 @@ export default function PublishScreen() {
 
         {/* Formulario */}
         <View style={styles.card}>
-          <Text style={styles.titulo}>Crear publicación</Text>
+          <View style={styles.headerPublicacion}>            
+            <Image
+              source={
+                userData?.profilePhoto
+                  ? { uri: userData?.profilePhoto }
+                  : require('../assets/images/default-avatar.png')
+              }
+              style={styles.avatar}
+            />
+            <Text style={styles.titulo}>Publica una noticia 🔥</Text>
+          </View>
           <Text style={styles.label}>Deporte</Text>
           <TouchableOpacity
             style={styles.selector}
@@ -237,7 +245,8 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 20,
-    textAlign: 'center'
+    textAlign: 'center',
+    marginTop:5,
   },
   card: {
     width: '90%',
@@ -308,4 +317,17 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
+  avatar: {
+    width:80,
+    height:80,
+    borderRadius: 80,
+    backgroundColor: '#ccc',
+    marginRight: 10,
+},
+headerPublicacion: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  marginBottom: 20,
+},
 });

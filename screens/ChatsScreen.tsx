@@ -8,6 +8,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { StyleSheet } from 'react-native';
 import { RootStackParamList } from '../routes';
 import { useAuth } from '../context/AuthContext';
+
 interface UserData {
   id: number;
   firstName: string;
@@ -19,18 +20,21 @@ interface UserData {
   basketball3x3: boolean;
   football7: boolean;
   football5: boolean;
+  padel: boolean;
   birthdate: string;
   geoReference: string;
   profilePhoto: string | null;
 }
 
 export default function ChatsScreen() {
-  const [chats, setChats] = useState<any[]>([]);
+  const [chatsReq, setChatsReq] = useState<any[]>([]);
+  const [prevChats, setPrevChats] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [selectedChat, setSelectedChat] = useState<any>(null);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [solNumber, setSolNumber] = useState<number>(0);
+  const [chatNumber, setChatNumber] = useState<number>(0);
   const { token } = useAuth(); 
   const [activeTab, setActiveTab] = useState<'chats' | 'solicitudes'>('chats');
 
@@ -41,8 +45,25 @@ export default function ChatsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      fetchUserData();
-    }, [])
+      const loadUser = async () => {
+        try {
+          const response = await fetch(`${env.API_URL}users/`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+          });
+          if (!response.ok) throw new Error('Error al obtener datos de usuario');
+  
+          const data = await response.json();
+          setUserData(data);
+        } catch (error) {
+          console.error('Error cargando usuario:', error);
+        }
+      };
+      loadUser();
+    }, [token])
   );
 
   const fetchUserData = async () => {
@@ -60,17 +81,25 @@ export default function ChatsScreen() {
       }
 
       const data = await response.json();
+      
       setUserData(data);
-      fetchSolChats(data.id);
     } catch (error) {
       console.error('Error trayendo datos de usuario:', error);
     }
   };
 
-  const fetchSolChats = async (user_id : number) => {
+  useEffect(() => {
+    if (!userData) return;
+  
+    fetchSolChats(userData.id);
+    fetchChats(userData.id);
+  }, [userData]);
+
+  const fetchSolChats = async (user_id: number | undefined) => {
+    if (!user_id) return;
+  
     try {
       setLoading(true);
-
       const response = await fetch(`${env.API_URL}chat-requests/received/${user_id}`, {
         method: 'GET',
         headers: {
@@ -78,13 +107,37 @@ export default function ChatsScreen() {
           'Content-Type': 'application/json',
         },
       });
-
+  
       if (!response.ok) throw new Error('Error al cargar chats');
-
+  
       const data = await response.json();
-      setChats(data);
+      setChatsReq(data);
       setSolNumber(data.length);
-
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const fetchChats = async (user_id: number | undefined) => {
+    if (!user_id) return;
+  
+    try {
+      setLoading(true);
+      const response = await fetch(`${env.API_URL}chat/preview-chats/${user_id}`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+  
+      if (!response.ok) throw new Error('Error al cargar chats');
+  
+      const data = await response.json();
+      setPrevChats(data);
+      setChatNumber(data.length);
     } catch (error) {
       console.error('Error:', error);
     } finally {
@@ -104,6 +157,8 @@ export default function ChatsScreen() {
   };
 
   const deleteChatRequest = async (chatId: number) => {
+    if (!userData) return; // <-- Prevenir acceso a id si userData aún no está cargado
+  
     try {
       const response = await fetch(`${env.API_URL}chat-requests/${chatId}`, {
         method: 'DELETE',
@@ -112,124 +167,191 @@ export default function ChatsScreen() {
           'Content-Type': 'application/json',
         },
       });
-
+  
       if (!response.ok) throw new Error('Error al eliminar solicitud');
-      setChats(chats.filter(chat => chat.id !== chatId));  // Eliminar de la lista
+      setChatsReq(chatsReq.filter(req => req.id !== chatId));
     } catch (error) {
       console.error('Error:', error);
     } finally {
       setIsModalVisible(false);
-      fetchSolChats(userData?.id);
+      fetchSolChats(userData.id); // <-- Seguro porque validamos antes
     }
   };
 
-  const renderMessagePreview = (message: string) => {
-    return message.length > 50 ? `${message.slice(0, 47)}...` : message;
+  const renderMessagePreview = (message: string, senderId: number) => {
+    if (!userData) return message; // <-- prevención
+    let prefix = senderId === userData.id ? "Tú: " : "";
+    const fullMessage = prefix + message;
+    return fullMessage.length > 50 ? `${fullMessage.slice(0, 47)}...` : fullMessage;
   };
 
-  return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.goback}>{'←'}</Text>
-        </TouchableOpacity>
-  
-        <View style={styles.logoContainer}>
-          <Image source={require('./../assets/images/logo.png')} style={styles.logo} />
-          <Text style={styles.changapp}>ChangApp</Text>
-        </View>
-      </View>
-  
-      {/* Tabs */}
-      <View style={styles.tabsContainer}>
-        <TouchableOpacity
-          style={[styles.tabButton, activeTab === 'chats' && styles.tabButtonActive]}
-          onPress={() => setActiveTab('chats')}
-        >
-          <Text style={styles.tabText}>Chats</Text>
-        </TouchableOpacity>
-  
-        <TouchableOpacity
-          style={[styles.tabButton, activeTab === 'solicitudes' && styles.tabButtonActive]}
-          onPress={() => setActiveTab('solicitudes')}
-        >
-          <Text style={styles.tabText}>
-            {solNumber > 0 ? `Solicitudes (${solNumber})` : 'Solicitudes'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-  
-      {/* Contenido del Tab */}
-      {loading ? (
-        <ActivityIndicator animating={true} size="large" color="#ffffff" />
-      ) : activeTab === 'solicitudes' ? (
-        <FlatList
-          data={chats}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              onPress={() =>
-                navigation.navigate('ChatDetail', {
-                  receiverId: item.requested.id,
-                  name: `${item.requester.firstName} ${item.requester.lastName}`,
-                  profilePhoto: item.requester.profilePicture,
-                  requestId : item.id,
-                  message : item.requestedMessage, 
-                  requesterId: item.requester.id,
-                  timestamp: item.createdAt 
-                })
-              }
-              onLongPress={() => {
-                setSelectedChat(item);
-                setIsModalVisible(true);
-              }}
-            >
-              <Card style={styles.postCard}>
-                <View style={styles.userRow}>
-                  <Avatar.Text
-                    size={40}
-                    label={item.requester.nickname[0]}
-                    style={styles.avatar}
-                  />
-                  <View>
-                    <Text style={styles.userName}>
-                      {item.requester.firstName} {item.requester.lastName}
-                    </Text>
-                    <Text style={styles.postTime}>
-                      {new Date(item.createdAt).toLocaleDateString()}
-                    </Text>
-                    <Text style={styles.postContent}>
-                      {renderMessagePreview(item.requestedMessage)}
-                    </Text>
-                  </View>
-                </View>
-              </Card>
-            </TouchableOpacity>
-          )}
-        />
-      ) : (
-        <Text style={{ color: 'white', marginTop: 20 }}>Aquí irían los chats normales 😊</Text>
-      )}
-  
-      {/* Modal Confirmación */}
-      <Modal
-        visible={isModalVisible}
-        onRequestClose={() => setIsModalVisible(false)}
-        transparent
-        animationType="fade"
-      >
-        <View style={styles.modalBackground}>
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Eliminar Solicitud</Text>
-            <Button onPress={() => handleDeleteChatRequest(selectedChat?.id)}>
-              Eliminar Solicitud
-            </Button>
-            <Button onPress={() => setIsModalVisible(false)}>Cancelar</Button>
+  if (!userData) {
+    return <ActivityIndicator animating={true} size="large" color="#ffffff" />;
+  }
+  else{
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Text style={styles.goback}>{'←'}</Text>
+          </TouchableOpacity>
+    
+          <View style={styles.logoContainer}>
+            <Image source={require('./../assets/images/logo.png')} style={styles.logo} />
+            <Text style={styles.changapp}>ChangApp</Text>
           </View>
         </View>
-      </Modal>
-    </View>
-  );
+    
+        {/* Tabs */}
+        <View style={styles.tabsContainer}>
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'chats' && styles.tabButtonActive]}
+            onPress={() => setActiveTab('chats')}
+          >
+            <Text style={styles.tabText}>Chats</Text>
+          </TouchableOpacity>
+    
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'solicitudes' && styles.tabButtonActive]}
+            onPress={() => setActiveTab('solicitudes')}
+          >
+            <Text style={styles.tabText}>
+              {solNumber > 0 ? `Solicitudes (${solNumber})` : 'Solicitudes'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+    
+        {/* Contenido del Tab */}
+        {loading ? (
+          <ActivityIndicator animating={true} size="large" color="#ffffff" />
+        ) : activeTab === 'solicitudes' ? (
+          <FlatList
+            data={chatsReq}
+            keyExtractor={(item) => item.id.toString()}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                onPress={() =>
+                  navigation.navigate('ChatDetail', {
+                    completeItem: item,
+                    request: true,
+                  })
+                }
+                onLongPress={() => {
+                  setSelectedChat(item);
+                  setIsModalVisible(true);
+                }}
+              >
+                <Card style={styles.postCard}>
+                  <View style={styles.userRow}>
+                    <Image
+                      source={
+                        item.requester?.profilePicture
+                          ? { uri: item.requester.profilePicture }
+                          : require('../assets/images/default-avatar.png')
+                      }
+                      style={styles.avatar}
+                    />
+                    <View>
+                      <Text style={styles.userName}>
+                        {item.requester?.firstName ?? 'Usuario'} {item.requester?.lastName ?? ''}
+                      </Text>
+                      <Text style={styles.postTime}>
+                        {new Date(item.createdAt).toLocaleDateString()}
+                      </Text>
+                      <Text style={styles.postContent}>
+                        {renderMessagePreview(item.requestedMessage, 0)}
+                      </Text>
+                    </View>
+                  </View>
+                </Card>
+              </TouchableOpacity>
+            )}
+          />
+        ) : (
+          <FlatList
+            data={prevChats}
+            keyExtractor={(item) => item.id.toString()}
+            renderItem={({ item }) => {
+              const chat = item.chat;
+              const userOne = chat?.userOne;
+              const userTwo = chat?.userTwo;
+    
+              if (!chat || !userOne || !userTwo || !userData) {
+                return (
+                  <View style={{ padding: 10 }}>
+                    <Text style={{ color: 'red' }}>⚠️ Chat inválido</Text>
+                  </View>
+                );
+              }
+    
+              const otherUser = userOne.id === userData.id ? userTwo : userOne;
+    
+              return (
+                <TouchableOpacity
+                  onPress={() =>
+                    navigation.navigate('ChatDetail', {
+                      completeItem: item,
+                      request: false,
+                    })
+                  }
+                  onLongPress={() => {
+                    setSelectedChat(item);
+                    setIsModalVisible(true);
+                  }}
+                >
+                  <Card style={styles.postCard}>
+                    <View style={styles.userRow}>
+                      <Image
+                        source={
+                          otherUser.profilePicture
+                            ? { uri: otherUser.profilePicture }
+                            : require('../assets/images/default-avatar.png')
+                        }
+                        style={styles.avatar}
+                      />
+                      <View>
+                        <Text style={styles.userName}>
+                          {otherUser.firstName} {otherUser.lastName}
+                        </Text>
+                        <Text style={styles.postTime}>
+                          {new Date(item.sentAt).toLocaleDateString()}
+                        </Text>
+                        <Text style={styles.postContent}>
+                          {renderMessagePreview(item.message, item.sender?.id ?? 0)}
+                        </Text>
+                      </View>
+                    </View>
+                  </Card>
+                </TouchableOpacity>
+              );
+            }}
+          />
+        )}
+    
+        {/* Modal Confirmación */}
+        <Modal
+          visible={isModalVisible}
+          onRequestClose={() => setIsModalVisible(false)}
+          transparent
+          animationType="fade"
+        >
+          <View style={styles.modalBackground}>
+            <View style={styles.modalContainer}>
+              <Text style={styles.modalTitle}>Eliminar Solicitud</Text>
+              <Button onPress={() => handleDeleteChatRequest(selectedChat?.id)}>
+                Eliminar Solicitud
+              </Button>
+              <Button onPress={() => setIsModalVisible(false)}>Cancelar</Button>
+            </View>
+          </View>
+        </Modal>
+      </View>
+    );
+    
+    
+  }
+
+  
   
 }
 

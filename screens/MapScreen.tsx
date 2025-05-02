@@ -65,6 +65,10 @@ const MapScreen = () => {
         setSelectedSportId(4);
         handleChangeRadious(4);
       }
+      else if ( sport == "Padel" ){
+        setSelectedSportId(5);
+        handleChangeRadious(5);
+      }
       closeMenu();
     } catch (error) {
       
@@ -154,7 +158,6 @@ const MapScreen = () => {
   
         const data = await response.text();
 
-        console.log(response.ok)
   
         if (response.ok) {
           navigation.navigate("Chats")
@@ -236,6 +239,7 @@ const MapScreen = () => {
             <Menu.Item onPress={() => handleSelect('Futbol 5')} title="Fútbol 5" />
             <Menu.Item onPress={() => handleSelect('Basquetbol')} title="Básquetbol" />
             <Menu.Item onPress={() => handleSelect('Basquetbol 3x3')} title="Básquetbol 3x3" />
+            <Menu.Item onPress={() => handleSelect('Padel')} title="Padel" />
           </Menu>
           <View style={styles.sliderContainer}>
           <Text style={styles.sliderLabel}>Radio de búsqueda: {(radius / 1000).toFixed(1)} km</Text>

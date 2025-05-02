@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity, TextInput, FlatList,
+    Image,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { useAuth } from '../context/AuthContext';
@@ -33,6 +34,7 @@ export default function PostItem({ item, userData, definePostToDelete, setShowDe
 
     useEffect(() => {
         if (commentsVisible) fetchComments();
+
     }, [commentsVisible]);
 
     const fetchComments = async () => {
@@ -49,7 +51,6 @@ export default function PostItem({ item, userData, definePostToDelete, setShowDe
 
     const postComment = async () => {
         if (!newComment.trim()) return;
-        console.log(item)
         try {
             const response = await fetch(`${env.API_URL}comments/${item._id}/${item.user_id}`, {
                 method: 'POST',
@@ -61,6 +62,7 @@ export default function PostItem({ item, userData, definePostToDelete, setShowDe
                     userId: userData.id,
                     userNickname: userData.nickname,
                     body: newComment,
+                    profilePicture : userData.profilePhoto
                 }),
             });
 
@@ -75,7 +77,6 @@ export default function PostItem({ item, userData, definePostToDelete, setShowDe
 
     const handleDeleteComment = async (commentId: string) => {
         try {
-        console.log(commentId)
           const res = await fetch(`${env.API_URL}comments/${commentId}`, {
             method: 'DELETE',
             headers: {
@@ -136,7 +137,14 @@ export default function PostItem({ item, userData, definePostToDelete, setShowDe
     return (
         <View style={styles.post}>
             <View style={styles.postHeader}>
-                <View style={styles.avatar} />
+            <Image
+                source={
+                    item.profilePicture
+                    ? { uri: item.profilePicture }
+                    : require('../assets/images/default-avatar.png') // Ruta a tu imagen por defecto
+                }
+                style={styles.avatar}
+                />
                 <View style={{ flex: 1 }}>
                     <Text style={styles.user}>{item.nickname}</Text>
                     <Text style={styles.time}>{new Date(item.timestamp).toLocaleString()}</Text>
@@ -185,7 +193,18 @@ export default function PostItem({ item, userData, definePostToDelete, setShowDe
                         renderItem={({ item }) => (
                             <View style={styles.commentRow}>
                                 <View style={{ flex: 1 }}>
-                                    <Text style={{ fontWeight: 'bold' }}>{item.userNickname}</Text>
+                                    <View style={styles.postHeader}>
+                                    <Image
+                                        source={
+                                            item.profilePicture
+                                            ? { uri: item.profilePicture }
+                                            : require('../assets/images/default-avatar.png') // Ruta a tu imagen por defecto
+                                        }
+                                        style={styles.avatar}
+                                        />
+                                        <Text style={{ fontWeight: 'bold' }}>{item.userNickname}</Text>
+                                    </View>
+                                
                                     <Text>{item.body}</Text>
                                 </View>
                                 {item.userId == userData.id && (

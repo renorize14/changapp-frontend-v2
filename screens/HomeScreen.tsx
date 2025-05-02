@@ -25,6 +25,7 @@ interface UserData {
   basketball3x3: boolean;
   football7: boolean;
   football5: boolean;
+  padel: boolean;
   birthdate: string;
   geoReference: string;
   profilePhoto: string | null;
@@ -71,7 +72,6 @@ export default function HomeScreen() {
       if (response.ok) {
         Alert.alert('Éxito', 'Publicación eliminada');
       } else {
-        console.log(response)
         Alert.alert('Error', 'No se pudo eliminar la publicación');
       }
     } catch (error) {

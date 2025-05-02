@@ -13,11 +13,14 @@ import {
   TouchableWithoutFeedback,
   Alert,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { AntDesign, Ionicons } from '@expo/vector-icons';
 import { ScrollView } from 'react-native-gesture-handler';
 import { useAuth } from '../context/AuthContext';
 import env from '../config/env';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useNavigation } from '@react-navigation/native';
+import { Button } from 'react-native-paper';
+import * as Google from 'expo-auth-session/providers/google';
 
 const LoginScreen = () => {
   const { signIn } = useAuth(); // función que debe guardar token/usuario en contexto
@@ -25,8 +28,63 @@ const LoginScreen = () => {
   const [password, setPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [loading, setLoading] = useState(false);
+  const navigation = useNavigation();
 
   AsyncStorage.removeItem('token');
+
+  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
+    clientId: env.GOOGLE_CLIENT_ID, // Obtén tu CLIENT_ID desde Google Cloud Console
+    iosClientId: env.GOOGLE_IOS_CLIENT_ID, // ID de cliente para iOS
+    androidClientId: env.GOOGLE_ANDROID_CLIENT_ID, // ID de cliente para Android
+  });
+
+  /*React.useEffect(() => {
+    if (response?.type === 'success') {
+      const { id_token } = response.params; // El id_token es el que se obtiene al autenticarse
+      handleGoogleSignIn(id_token);
+    }
+  }, [response]);*/
+
+  React.useEffect(() => {
+    const checkBackendConnection = async () => {
+      try {
+        const response = await fetch(`${env.API_URL}users`); 
+        if (!response.ok) throw new Error('Servidor no responde');
+      } catch (error) {
+        Alert.alert(
+          'Error de conexión',
+          'No se pudo establecer comunicación con el servidor. Intenta más tarde.'
+        );
+      }
+    };
+  
+    checkBackendConnection();
+  }, []);
+
+  const handleGoogleSignIn = async (idToken : any) => {
+    try {
+      const response = await fetch(`${env.API_URL}api/oauth2/success`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id_token: idToken }),
+      });
+      const json = await response.json();
+
+      if (json.token) {
+        // Guarda el token en AsyncStorage y en contexto
+        await AsyncStorage.setItem('token', json.token);
+        signIn(json.token, json.user.email); // Asume que el backend te devuelve el token y los datos del usuario
+        navigation.navigate('Home'); // Redirige a la pantalla principal
+      } else {
+        Alert.alert('Error', 'No se pudo autenticar con Google');
+      }
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Error', 'Ocurrió un error al procesar tu solicitud.');
+    }
+  };
   
 
   const handleLogin = async () => {
@@ -117,14 +175,16 @@ const LoginScreen = () => {
                 <Text style={styles.loginButtonText}>{loading ? 'Cargando...' : 'Ingresar'}</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.googleButton}>
-                <Text style={styles.googleButtonText}>
-                  <Text>🟢 </Text>
-                  Ingresar con Google
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity>
+              {/* Barra superior <Button
+                icon={() => <AntDesign name="google" size={20} color="#DB4437" />}
+                mode="outlined"
+                style={styles.socialButton}
+                onPress={() => promptAsync()}
+              >
+                Acceder con Google
+              </Button>*/}
+              
+              <TouchableOpacity onPress={ () => navigation.navigate('Register')}>
                 <Text style={styles.signupText}>
                   ¿No tienes una cuenta? <Text style={styles.signupLink}>Regístrate</Text>
                 </Text>
@@ -220,5 +280,10 @@ const styles = StyleSheet.create({
   signupLink: {
     fontWeight: 'bold',
     textDecorationLine: 'underline',
+  },
+  socialButton: {
+    width: '100%',
+    marginVertical: 5,
+    backgroundColor: '#fff',
   },
 });
